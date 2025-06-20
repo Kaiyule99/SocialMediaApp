@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext.js';
-import { loginUserApi, registerUserApi } from '../../api/socialApi.js';
-import { CardinalLogo } from '../layout/Icons.js';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { loginUserApi, registerUserApi } from '../../api/socialApi';
+import { CardinalLogo } from '../layout/Icons';
 
-export const AuthPage = ({ isLogin, setPage }) => {
+export const AuthPage = ({ isLogin }) => {
     const { login } = useAuth();
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
+    const [fName, setFName] = useState('');
+    const [lName, setLName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     
@@ -16,15 +19,26 @@ export const AuthPage = ({ isLogin, setPage }) => {
         setLoading(true);
         setError('');
         try {
-            let response;
+            let loginResponse;
             if (isLogin) {
-                response = await loginUserApi(email, password);
+                loginResponse = await loginUserApi(email, password);
             } else {
-                await registerUserApi(name, email, password);
-                response = await loginUserApi(email, password);
+                await registerUserApi(fName, lName, email, password);
+                loginResponse = await loginUserApi(email, password);
             }
-            login(response.access_token);
+
+            // --- FIX ---
+            // Explicitly check if the access_token exists in the response.
+            if (loginResponse && loginResponse.access_token) {
+                login(loginResponse.access_token);
+                navigate('/');
+            } else {
+                // If no token is received, throw an error to be displayed to the user.
+                throw new Error("Login successful, but no access token was received from the server.");
+            }
+
         } catch (err) {
+            console.error("Authentication Error:", err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -40,13 +54,26 @@ export const AuthPage = ({ isLogin, setPage }) => {
                 <h2 className="text-3xl font-bold text-center text-white mb-6">
                     {isLogin ? 'Sign in to Chirp' : 'Create your account'}
                 </h2>
-                {error && <p className="bg-red-900/50 text-red-300 p-3 rounded-md mb-4 text-center">{error}</p>}
+                {error && (
+                    <div className="bg-red-900/50 border border-red-700 text-red-300 p-3 rounded-md mb-4 text-center">
+                        <p className="font-bold">Error</p>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {!isLogin && (
-                        <div>
-                            <label className="text-sm font-bold text-gray-400 block mb-2" htmlFor="name">Name</label>
-                            <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required className="w-full p-3 bg-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500" />
-                        </div>
+                        <>
+                            <div className="flex space-x-4">
+                                <div className="flex-1">
+                                    <label className="text-sm font-bold text-gray-400 block mb-2" htmlFor="fName">First Name</label>
+                                    <input id="fName" type="text" value={fName} onChange={(e) => setFName(e.target.value)} required className="w-full p-3 bg-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-sm font-bold text-gray-400 block mb-2" htmlFor="lName">Last Name</label>
+                                    <input id="lName" type="text" value={lName} onChange={(e) => setLName(e.target.value)} required className="w-full p-3 bg-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500" />
+                                </div>
+                            </div>
+                        </>
                     )}
                     <div>
                         <label className="text-sm font-bold text-gray-400 block mb-2" htmlFor="email">Email</label>
@@ -62,9 +89,9 @@ export const AuthPage = ({ isLogin, setPage }) => {
                 </form>
                  <p className="text-center text-gray-400 mt-6">
                     {isLogin ? "Don't have an account? " : "Already have an account? "}
-                    <button onClick={() => setPage(isLogin ? 'register' : 'login')} className="font-bold text-red-500 hover:underline">
+                    <Link to={isLogin ? '/register' : '/login'} className="font-bold text-red-500 hover:underline">
                         {isLogin ? 'Sign Up' : 'Sign In'}
-                    </button>
+                    </Link>
                 </p>
             </div>
         </div>

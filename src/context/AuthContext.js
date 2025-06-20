@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getUserDataApi } from '../api/socialApi.js';
+import { getUserDataApi } from '../api/socialApi';
 
 const AuthContext = createContext(null);
 
@@ -35,7 +35,12 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
-    const value = { user, token, login, logout, isAuthenticated: !!token, isLoading };
+    // --- NEW FUNCTION TO UPDATE THE USER OBJECT ---
+    const updateUser = (newUserData) => {
+        setUser(newUserData);
+    };
+
+    const value = { user, token, login, logout, updateUser, isAuthenticated: !!token, isLoading };
     
     return (
         <AuthContext.Provider value={value}>
