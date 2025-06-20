@@ -19,24 +19,19 @@ export const AuthPage = ({ isLogin }) => {
         setLoading(true);
         setError('');
         try {
-            let loginResponse;
+            let response;
             if (isLogin) {
-                loginResponse = await loginUserApi(email, password);
+                response = await loginUserApi(email, password);
             } else {
                 await registerUserApi(fName, lName, email, password);
-                loginResponse = await loginUserApi(email, password);
+                response = await loginUserApi(email, password);
             }
-
-            // --- FIX ---
-            // Explicitly check if the access_token exists in the response.
-            if (loginResponse && loginResponse.access_token) {
-                login(loginResponse.access_token);
+            if (response && response.access_token) {
+                login(response.access_token);
                 navigate('/');
             } else {
-                // If no token is received, throw an error to be displayed to the user.
-                throw new Error("Login successful, but no access token was received from the server.");
+                throw new Error("Login failed: No access token received.");
             }
-
         } catch (err) {
             console.error("Authentication Error:", err);
             setError(err.message);

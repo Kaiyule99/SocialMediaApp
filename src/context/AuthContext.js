@@ -1,46 +1,54 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getUserDataApi } from '../api/socialApi';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { getUserDataApi, fetchPostsApi } from '../api/socialApi';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(() => localStorage.getItem('chirp-token'));
     const [user, setUser] = useState(null);
+    const [posts, setPosts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            if (token) {
-                localStorage.setItem('chirp-token', token);
-                try {
-                    const userData = await getUserDataApi(token);
-                    setUser(userData);
-                } catch (error) {
-                    console.error("Session expired or invalid.", error);
-                    setToken(null);
-                    setUser(null);
-                    localStorage.removeItem('chirp-token');
-                }
-            } else {
-                localStorage.removeItem('chirp-token');
-            }
+    const refreshData = useCallback(async () => {
+        if (!token) {
             setIsLoading(false);
-        };
-        fetchUser();
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const [userData, postsData] = await Promise.all([
+                getUserDataApi(token),
+                fetchPostsApi(token)
+            ]);
+            setUser(userData);
+            setPosts(postsData);
+        } catch (error) {
+            console.error("Data fetch failed:", error);
+            logout();
+        } finally {
+            setIsLoading(false);
+        }
     }, [token]);
 
-    const login = (newToken) => setToken(newToken);
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
+
+    const login = (newToken) => {
+        localStorage.setItem('chirp-token', newToken);
+        setToken(newToken);
+    };
+
     const logout = () => {
-        setToken(null);
         setUser(null);
+        setToken(null);
+        setPosts([]);
+        localStorage.removeItem('chirp-token');
     };
+    
+    const updateUser = (newUserData) => setUser(newUserData);
 
-    // --- NEW FUNCTION TO UPDATE THE USER OBJECT ---
-    const updateUser = (newUserData) => {
-        setUser(newUserData);
-    };
-
-    const value = { user, token, login, logout, updateUser, isAuthenticated: !!token, isLoading };
+    const value = { user, token, posts, refreshData, login, logout, updateUser, isAuthenticated: !!user, isLoading };
     
     return (
         <AuthContext.Provider value={value}>

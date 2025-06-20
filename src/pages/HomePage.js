@@ -1,40 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext.js';
-import { fetchPostsApi } from '../api/socialApi.js';
-import { LeftSideBar } from '../components/layout/LeftSideBar.js';
-import { RightSideBar } from '../components/layout/RightSideBar.js';
-import { BottomNav } from '../components/layout/BottomNav.js';
-import { CreatePost } from '../components/core/CreatePost.js';
-import { PostCard } from '../components/core/PostCard.js';
+import React from 'react';
+import { useAuth } from '../context/AuthContext';
+import { LeftSideBar } from '../components/layout/LeftSideBar';
+import { RightSideBar } from '../components/layout/RightSideBar';
+import { BottomNav } from '../components/layout/BottomNav';
+import { CreatePost } from '../components/core/CreatePost';
+import { PostCard } from '../components/core/PostCard';
 
 const Loader = () => (<div className="flex justify-center items-center p-4"><div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div></div>);
 
 export const HomePage = () => {
-    const { token } = useAuth();
-    const [posts, setPosts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        const loadPosts = async () => {
-            if (!token) return;
-            setIsLoading(true);
-            try {
-                const fetchedPosts = await fetchPostsApi(token);
-                setPosts(fetchedPosts);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadPosts();
-    }, [token]);
+    const { posts, refreshData, isLoading } = useAuth();
     
-    const handlePostCreated = (newPost) => {
-        setPosts(prevPosts => [newPost, ...prevPosts]);
-    };
-
     return (
         <div className="flex container mx-auto max-w-7xl">
             <LeftSideBar />
@@ -43,12 +19,18 @@ export const HomePage = () => {
                     <h2 className="text-xl font-bold">Home</h2>
                 </header>
                 
-                <CreatePost onPostCreated={handlePostCreated} />
+                <CreatePost onPostCreated={refreshData} />
                 
-                {isLoading && <Loader />}
-                {error && <p className="text-center text-red-400 p-4">{error}</p>}
+                {isLoading && posts.length === 0 && <Loader />}
+                
                 <div className="divide-y divide-gray-700">
-                    {posts.map(post => <PostCard key={post.id} post={post} />)}
+                    {posts.map(post => (
+                        <PostCard 
+                            key={post.id} 
+                            post={post} 
+                            onInteraction={refreshData}
+                        />
+                    ))}
                 </div>
             </main>
             <RightSideBar />
